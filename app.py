@@ -3,6 +3,7 @@ from flask_cors import CORS
 import sqlite3
 from datetime import datetime
 import os
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -15,17 +16,79 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def parse_tennis_score(set_scores_str):
+    """
+    Parse tennis set scores and validate them.
+    Format: "6-4, 6-3" or "6-4 6-3" or "6-4,6-3"
+    Returns: (your_sets_won, opponent_sets_won, is_valid, error_message)
+    """
+    # Clean up the input
+    set_scores_str = set_scores_str.strip().replace(',', ' ')
+    sets = [s.strip() for s in set_scores_str.split() if s.strip()]
+
+    if not sets:
+        return (0, 0, False, "No sets provided")
+
+    your_sets = 0
+    opp_sets = 0
+
+    for set_score in sets:
+        # Validate format (e.g., "6-4")
+        match = re.match(r'^(\d+)-(\d+)$', set_score)
+        if not match:
+            return (0, 0, False, f"Invalid set format: {set_score}")
+
+        your_games = int(match.group(1))
+        opp_games = int(match.group(2))
+
+        # Validate tennis scoring rules
+        if not is_valid_set_score(your_games, opp_games):
+            return (0, 0, False, f"Invalid tennis score: {set_score}")
+
+        # Determine set winner
+        if your_games > opp_games:
+            your_sets += 1
+        else:
+            opp_sets += 1
+
+    return (your_sets, opp_sets, True, "")
+
+def is_valid_set_score(score1, score2):
+    """
+    Validate if a set score is valid according to tennis rules.
+    Valid scores: 6-0, 6-1, 6-2, 6-3, 6-4, 7-5, 7-6
+    (and their reverses for opponent wins)
+    """
+    valid_scores = [
+        (6, 0), (6, 1), (6, 2), (6, 3), (6, 4),
+        (7, 5), (7, 6),
+        (0, 6), (1, 6), (2, 6), (3, 6), (4, 6),
+        (5, 7), (6, 7)
+    ]
+    return (score1, score2) in valid_scores
+
 def init_db():
     """Initialize the database with the matches table"""
     with app.app_context():
         db = get_db()
+
+        # Check if we need to migrate old schema
+        cursor = db.execute("PRAGMA table_info(matches)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        if 'set_scores' not in columns:
+            # Drop old table and create new one
+            db.execute('DROP TABLE IF EXISTS matches')
+
         db.execute('''
             CREATE TABLE IF NOT EXISTS matches (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
                 opponent TEXT NOT NULL,
-                your_score INTEGER NOT NULL,
-                opponent_score INTEGER NOT NULL,
+                set_scores TEXT NOT NULL,
+                tiebreak_scores TEXT,
+                your_sets_won INTEGER NOT NULL,
+                opponent_sets_won INTEGER NOT NULL,
                 surface TEXT NOT NULL,
                 match_type TEXT NOT NULL,
                 notes TEXT,
@@ -59,20 +122,28 @@ def add_match():
         data = request.json
 
         # Validate required fields
-        required_fields = ['date', 'opponent', 'your_score', 'opponent_score', 'surface', 'match_type']
+        required_fields = ['date', 'opponent', 'set_scores', 'surface', 'match_type']
         for field in required_fields:
-            if field not in data:
+            if field not in data or not data[field]:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Parse and validate tennis score
+        your_sets, opp_sets, is_valid, error_msg = parse_tennis_score(data['set_scores'])
+
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
 
         db = get_db()
         db.execute('''
-            INSERT INTO matches (date, opponent, your_score, opponent_score, surface, match_type, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO matches (date, opponent, set_scores, tiebreak_scores, your_sets_won, opponent_sets_won, surface, match_type, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['date'],
             data['opponent'],
-            data['your_score'],
-            data['opponent_score'],
+            data['set_scores'],
+            data.get('tiebreak_scores', ''),
+            your_sets,
+            opp_sets,
             data['surface'],
             data['match_type'],
             data.get('notes', '')
@@ -108,8 +179,8 @@ def get_stats():
         total_matches = db.execute('SELECT COUNT(*) as count FROM matches').fetchone()['count']
 
         # Wins and losses
-        wins = db.execute('SELECT COUNT(*) as count FROM matches WHERE your_score > opponent_score').fetchone()['count']
-        losses = db.execute('SELECT COUNT(*) as count FROM matches WHERE your_score < opponent_score').fetchone()['count']
+        wins = db.execute('SELECT COUNT(*) as count FROM matches WHERE your_sets_won > opponent_sets_won').fetchone()['count']
+        losses = db.execute('SELECT COUNT(*) as count FROM matches WHERE your_sets_won < opponent_sets_won').fetchone()['count']
 
         # Win percentage
         win_percentage = (wins / total_matches * 100) if total_matches > 0 else 0
@@ -119,8 +190,8 @@ def get_stats():
             SELECT
                 surface,
                 COUNT(*) as total,
-                SUM(CASE WHEN your_score > opponent_score THEN 1 ELSE 0 END) as wins,
-                SUM(CASE WHEN your_score < opponent_score THEN 1 ELSE 0 END) as losses
+                SUM(CASE WHEN your_sets_won > opponent_sets_won THEN 1 ELSE 0 END) as wins,
+                SUM(CASE WHEN your_sets_won < opponent_sets_won THEN 1 ELSE 0 END) as losses
             FROM matches
             GROUP BY surface
         ''').fetchall()
@@ -128,7 +199,7 @@ def get_stats():
         # Recent form (last 10 matches)
         recent_matches = db.execute('''
             SELECT
-                CASE WHEN your_score > opponent_score THEN 'W' ELSE 'L' END as result
+                CASE WHEN your_sets_won > opponent_sets_won THEN 'W' ELSE 'L' END as result
             FROM matches
             ORDER BY date DESC
             LIMIT 10

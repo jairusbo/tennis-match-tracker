@@ -12,6 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set up form submission
     document.getElementById('matchForm').addEventListener('submit', handleFormSubmit);
+
+    // Show tiebreak field based on set scores
+    document.getElementById('setScores').addEventListener('input', function(e) {
+        const setScores = e.target.value;
+        const tiebreakGroup = document.getElementById('tiebreakGroup');
+
+        // Check if any set is 7-6 or 6-7
+        if (setScores.includes('7-6') || setScores.includes('6-7')) {
+            tiebreakGroup.style.display = 'block';
+        } else {
+            tiebreakGroup.style.display = 'none';
+            document.getElementById('tiebreakScores').value = '';
+        }
+    });
 });
 
 // Handle form submission
@@ -21,8 +35,8 @@ async function handleFormSubmit(e) {
     const formData = {
         date: document.getElementById('date').value,
         opponent: document.getElementById('opponent').value,
-        your_score: parseInt(document.getElementById('yourScore').value),
-        opponent_score: parseInt(document.getElementById('opponentScore').value),
+        set_scores: document.getElementById('setScores').value,
+        tiebreak_scores: document.getElementById('tiebreakScores').value,
         surface: document.getElementById('surface').value,
         match_type: document.getElementById('matchType').value,
         notes: document.getElementById('notes').value
@@ -37,10 +51,13 @@ async function handleFormSubmit(e) {
             body: JSON.stringify(formData)
         });
 
+        const result = await response.json();
+
         if (response.ok) {
             // Reset form
             document.getElementById('matchForm').reset();
             document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('tiebreakGroup').style.display = 'none';
 
             // Reload data
             loadMatches();
@@ -49,8 +66,7 @@ async function handleFormSubmit(e) {
             // Show success message
             alert('Match added successfully!');
         } else {
-            const error = await response.json();
-            alert('Error adding match: ' + error.error);
+            alert('Error: ' + (result.error || 'Failed to add match'));
         }
     } catch (error) {
         console.error('Error:', error);
@@ -86,10 +102,11 @@ async function loadMatches() {
 
 // Create match card HTML
 function createMatchCard(match) {
-    const isWin = match.your_score > match.opponent_score;
+    const isWin = match.your_sets_won > match.opponent_sets_won;
     const resultClass = isWin ? 'win' : 'loss';
     const resultText = isWin ? 'WIN' : 'LOSS';
-    const score = `${match.your_score} - ${match.opponent_score}`;
+    const setScores = match.set_scores;
+    const tiebreakScores = match.tiebreak_scores;
 
     return `
         <div class="match-card ${resultClass}">
@@ -100,7 +117,8 @@ function createMatchCard(match) {
             </div>
             <div class="match-details">
                 <div class="match-detail"><strong>Opponent:</strong> ${match.opponent}</div>
-                <div class="match-detail"><strong>Score:</strong> ${score}</div>
+                <div class="match-detail"><strong>Score:</strong> ${setScores}${tiebreakScores ? ` (${tiebreakScores})` : ''}</div>
+                <div class="match-detail"><strong>Sets:</strong> ${match.your_sets_won}-${match.opponent_sets_won}</div>
                 <div class="match-detail"><strong>Surface:</strong> ${match.surface}</div>
                 <div class="match-detail"><strong>Type:</strong> ${match.match_type}</div>
             </div>

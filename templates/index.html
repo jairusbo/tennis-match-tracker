@@ -51,15 +51,16 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="yourScore">Your Score</label>
-                        <input type="number" id="yourScore" name="your_score" min="0" max="7" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="opponentScore">Opponent Score</label>
-                        <input type="number" id="opponentScore" name="opponent_score" min="0" max="7" required>
-                    </div>
+                <div class="form-group">
+                    <label for="setScores">Set Scores</label>
+                    <input type="text" id="setScores" name="set_scores" placeholder="e.g., 6-4 6-3 or 6-4, 7-5" required>
+                    <small style="color: #666; font-size: 0.85em; margin-top: 5px; display: block;">Enter scores for each set separated by spaces or commas (e.g., "6-4 6-3" or "7-6 6-4")</small>
+                </div>
+
+                <div class="form-group" id="tiebreakGroup" style="display: none;">
+                    <label for="tiebreakScores">Tiebreak Scores (Optional)</label>
+                    <input type="text" id="tiebreakScores" name="tiebreak_scores" placeholder="e.g., 7-5 or 7-5, 10-8">
+                    <small style="color: #666; font-size: 0.85em; margin-top: 5px; display: block;">Enter tiebreak scores if any set was 7-6</small>
                 </div>
 
                 <div class="form-row">
