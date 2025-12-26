@@ -150,5 +150,5 @@ def get_stats():
 if __name__ == '__main__':
     init_db()
     print("🎾 Tennis Match Tracker is running!")
-    print("📊 Open http://localhost:5000 in your browser")
-    app.run(debug=True, port=5000)
+    print("📊 Open http://localhost:8080 in your browser")
+    app.run(debug=True, port=8080)

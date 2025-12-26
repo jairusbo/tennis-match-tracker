@@ -224,6 +224,7 @@ header h1 {
 
 .match-card {
     padding: 20px;
+    padding-right: 100px;
     background: #f9fafb;
     border-radius: 8px;
     border-left: 4px solid #667eea;
@@ -301,6 +302,7 @@ header h1 {
     cursor: pointer;
     font-size: 0.9em;
     transition: background 0.2s;
+    z-index: 10;
 }
 
 .delete-btn:hover {

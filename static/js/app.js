@@ -1,5 +1,5 @@
 // API base URL
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
