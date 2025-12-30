@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime
 import os
 import re
+import pattern_matcher
 
 app = Flask(__name__)
 CORS(app)
@@ -95,6 +96,34 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Create goals table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                target_date TEXT NOT NULL,
+                status TEXT DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Create goal_matches junction table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS goal_matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                goal_id INTEGER NOT NULL,
+                match_id INTEGER NOT NULL,
+                is_manual BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+                FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+                UNIQUE(goal_id, match_id)
+            )
+        ''')
+
         db.commit()
         db.close()
 
@@ -150,6 +179,30 @@ def add_match():
         ))
         db.commit()
         match_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+        # Auto-detect and link goals based on match notes
+        match_notes = data.get('notes', '')
+        if match_notes:
+            # Get all active goals
+            goals = db.execute('SELECT * FROM goals WHERE status = ?', ('active',)).fetchall()
+
+            for goal in goals:
+                # Extract keywords from goal
+                goal_text = f"{goal['title']} {goal['description'] or ''}"
+                keywords = pattern_matcher.extract_keywords(goal_text)
+
+                # Check if notes match goal keywords
+                if pattern_matcher.matches_goal(match_notes, keywords):
+                    try:
+                        # Link match to goal (is_manual=0 for auto-detection)
+                        db.execute('''
+                            INSERT OR IGNORE INTO goal_matches (goal_id, match_id, is_manual)
+                            VALUES (?, ?, 0)
+                        ''', (goal['id'], match_id))
+                        db.commit()
+                    except:
+                        pass  # Ignore duplicate link errors
+
         db.close()
 
         return jsonify({'id': match_id, 'message': 'Match added successfully'}), 201
@@ -214,6 +267,172 @@ def get_stats():
             'win_percentage': round(win_percentage, 1),
             'surface_stats': [dict(row) for row in surface_stats],
             'recent_form': [row['result'] for row in recent_matches]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals', methods=['GET'])
+def get_goals():
+    """Get all goals with match counts"""
+    try:
+        db = get_db()
+        goals = db.execute('SELECT * FROM goals ORDER BY created_at DESC').fetchall()
+
+        # Add match count for each goal
+        goals_with_counts = []
+        for goal in goals:
+            match_count = db.execute(
+                'SELECT COUNT(*) as count FROM goal_matches WHERE goal_id = ?',
+                (goal['id'],)
+            ).fetchone()['count']
+
+            goal_dict = dict(goal)
+            goal_dict['match_count'] = match_count
+            goals_with_counts.append(goal_dict)
+
+        db.close()
+        return jsonify(goals_with_counts)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals', methods=['POST'])
+def add_goal():
+    """Add a new goal"""
+    try:
+        data = request.json
+
+        # Validate required fields
+        required_fields = ['title', 'target_date']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        db = get_db()
+        db.execute('''
+            INSERT INTO goals (title, description, target_date, status)
+            VALUES (?, ?, ?, ?)
+        ''', (
+            data['title'],
+            data.get('description', ''),
+            data['target_date'],
+            data.get('status', 'active')
+        ))
+        db.commit()
+        goal_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        db.close()
+
+        return jsonify({'id': goal_id, 'message': 'Goal added successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals/<int:goal_id>', methods=['GET'])
+def get_goal(goal_id):
+    """Get a specific goal with related matches"""
+    try:
+        db = get_db()
+
+        # Get goal
+        goal = db.execute('SELECT * FROM goals WHERE id = ?', (goal_id,)).fetchone()
+        if not goal:
+            db.close()
+            return jsonify({'error': 'Goal not found'}), 404
+
+        # Get related matches
+        related_matches = db.execute('''
+            SELECT m.*, gm.is_manual, gm.created_at as linked_at
+            FROM matches m
+            JOIN goal_matches gm ON m.id = gm.match_id
+            WHERE gm.goal_id = ?
+            ORDER BY m.date DESC
+        ''', (goal_id,)).fetchall()
+
+        db.close()
+
+        return jsonify({
+            'goal': dict(goal),
+            'related_matches': [dict(match) for match in related_matches]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals/<int:goal_id>', methods=['PUT'])
+def update_goal(goal_id):
+    """Update a goal"""
+    try:
+        data = request.json
+
+        db = get_db()
+
+        # Check if goal exists
+        goal = db.execute('SELECT * FROM goals WHERE id = ?', (goal_id,)).fetchone()
+        if not goal:
+            db.close()
+            return jsonify({'error': 'Goal not found'}), 404
+
+        # Update goal
+        db.execute('''
+            UPDATE goals
+            SET title = ?, description = ?, target_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (
+            data.get('title', goal['title']),
+            data.get('description', goal['description']),
+            data.get('target_date', goal['target_date']),
+            data.get('status', goal['status']),
+            goal_id
+        ))
+        db.commit()
+        db.close()
+
+        return jsonify({'message': 'Goal updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals/<int:goal_id>', methods=['DELETE'])
+def delete_goal(goal_id):
+    """Delete a goal"""
+    try:
+        db = get_db()
+        db.execute('DELETE FROM goals WHERE id = ?', (goal_id,))
+        db.commit()
+        db.close()
+
+        return jsonify({'message': 'Goal deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/goals/<int:goal_id>/advice', methods=['GET'])
+def get_goal_advice(goal_id):
+    """Get AI-generated advice for a goal based on related matches"""
+    try:
+        db = get_db()
+
+        # Get goal
+        goal = db.execute('SELECT * FROM goals WHERE id = ?', (goal_id,)).fetchone()
+        if not goal:
+            db.close()
+            return jsonify({'error': 'Goal not found'}), 404
+
+        # Get related matches
+        related_matches = db.execute('''
+            SELECT m.*
+            FROM matches m
+            JOIN goal_matches gm ON m.id = gm.match_id
+            WHERE gm.goal_id = ?
+            ORDER BY m.date DESC
+        ''', (goal_id,)).fetchall()
+
+        db.close()
+
+        # Analyze progress and generate advice
+        analysis = pattern_matcher.analyze_goal_progress(
+            dict(goal),
+            [dict(match) for match in related_matches]
+        )
+
+        return jsonify({
+            'goal': dict(goal),
+            'analysis': analysis
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

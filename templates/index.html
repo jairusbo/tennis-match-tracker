@@ -88,7 +88,7 @@
 
                 <div class="form-group">
                     <label for="notes">Notes (Optional)</label>
-                    <textarea id="notes" name="notes" rows="3" placeholder="Match notes, key moments, areas to improve..."></textarea>
+                    <textarea id="notes" name="notes" rows="3" placeholder="Match notes, key moments, areas to improve... Tip: Mention your active goals to track progress!"></textarea>
                 </div>
 
                 <button type="submit" class="btn-primary">Add Match</button>
@@ -99,6 +99,55 @@
         <div class="surface-stats-container" id="surfaceStatsContainer">
             <h2>Performance by Surface</h2>
             <div id="surfaceStats" class="surface-stats"></div>
+        </div>
+
+        <!-- Goals & Milestones -->
+        <div class="goals-container">
+            <div class="goals-header">
+                <h2>Goals & Milestones</h2>
+                <button type="button" class="btn-secondary" id="toggleGoalForm">+ New Goal</button>
+            </div>
+
+            <!-- Goal Form -->
+            <div id="goalForm" class="goal-form" style="display: none;">
+                <form id="goalFormElement">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="goalTitle">Goal Title</label>
+                            <input type="text" id="goalTitle" name="title" placeholder="e.g., Reach 9 UTR by March" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="goalTargetDate">Target Date</label>
+                            <input type="date" id="goalTargetDate" name="target_date" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="goalDescription">Description (Optional)</label>
+                        <textarea id="goalDescription" name="description" rows="2" placeholder="e.g., Focus on consistency and finishing points at the net"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Goal</button>
+                        <button type="button" class="btn-cancel" id="cancelGoalForm">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Goals List -->
+            <div id="goalsList" class="goals-list"></div>
+        </div>
+
+        <!-- Advice Modal -->
+        <div id="adviceModal" class="advice-modal" style="display: none;">
+            <div class="advice-modal-overlay" id="adviceModalOverlay"></div>
+            <div class="advice-content">
+                <div class="advice-header">
+                    <h3 id="adviceGoalTitle">Goal Analysis</h3>
+                    <button class="close-btn" id="closeAdviceModal">&times;</button>
+                </div>
+                <div class="advice-body" id="adviceBody">
+                    <!-- Advice content will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
 
         <!-- Match History -->

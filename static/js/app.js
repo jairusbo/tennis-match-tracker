@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial data
     loadMatches();
     loadStats();
+    loadGoals();
 
     // Set up form submission
     document.getElementById('matchForm').addEventListener('submit', handleFormSubmit);
@@ -26,6 +27,20 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('tiebreakScores').value = '';
         }
     });
+
+    // Goal form toggle
+    document.getElementById('toggleGoalForm').addEventListener('click', toggleGoalForm);
+    document.getElementById('cancelGoalForm').addEventListener('click', function() {
+        document.getElementById('goalForm').style.display = 'none';
+        document.getElementById('goalFormElement').reset();
+    });
+
+    // Goal form submission
+    document.getElementById('goalFormElement').addEventListener('submit', handleGoalFormSubmit);
+
+    // Close advice modal
+    document.getElementById('closeAdviceModal').addEventListener('click', closeAdviceModal);
+    document.getElementById('adviceModalOverlay').addEventListener('click', closeAdviceModal);
 });
 
 // Handle form submission
@@ -62,6 +77,7 @@ async function handleFormSubmit(e) {
             // Reload data
             loadMatches();
             loadStats();
+            loadGoals();
 
             // Show success message
             alert('Match added successfully!');
@@ -218,4 +234,258 @@ function displaySurfaceStats(surfaceStats) {
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
+}
+
+// ===== GOALS & MILESTONES FUNCTIONS =====
+
+// Load and display goals
+async function loadGoals() {
+    try {
+        const response = await fetch(`${API_URL}/goals`);
+        const goals = await response.json();
+
+        const goalsList = document.getElementById('goalsList');
+
+        if (goals.length === 0) {
+            goalsList.innerHTML = '<div class="no-goals">No goals set yet. Create your first goal above!</div>';
+            return;
+        }
+
+        goalsList.innerHTML = goals.map(goal => createGoalCard(goal)).join('');
+    } catch (error) {
+        console.error('Error loading goals:', error);
+    }
+}
+
+// Create a goal card HTML
+function createGoalCard(goal) {
+    const targetDate = new Date(goal.target_date);
+    const today = new Date();
+    const daysUntil = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
+
+    let deadlineText = '';
+    let deadlineClass = '';
+
+    if (daysUntil < 0) {
+        deadlineText = `${Math.abs(daysUntil)} days overdue`;
+        deadlineClass = 'deadline-urgent';
+    } else if (daysUntil === 0) {
+        deadlineText = 'Due today!';
+        deadlineClass = 'deadline-urgent';
+    } else if (daysUntil < 7) {
+        deadlineText = `${daysUntil} days left`;
+        deadlineClass = 'deadline-urgent';
+    } else if (daysUntil < 30) {
+        deadlineText = `${daysUntil} days left`;
+        deadlineClass = 'deadline-warning';
+    } else {
+        deadlineText = `${daysUntil} days left`;
+        deadlineClass = '';
+    }
+
+    const statusBadge = `<span class="goal-status-badge ${goal.status}">${goal.status.toUpperCase()}</span>`;
+
+    return `
+        <div class="goal-card ${goal.status}">
+            <div class="goal-header-section">
+                <div>
+                    <div class="goal-title">${goal.title}</div>
+                    ${statusBadge}
+                </div>
+            </div>
+            ${goal.description ? `<div class="goal-description">${goal.description}</div>` : ''}
+            <div class="goal-meta">
+                <div class="goal-meta-item">
+                    <span class="goal-meta-label">Target Date:</span>
+                    <span>${formatDate(goal.target_date)}</span>
+                </div>
+                <div class="goal-meta-item ${deadlineClass}">
+                    <span class="goal-meta-label">Time Remaining:</span>
+                    <span>${deadlineText}</span>
+                </div>
+                <div class="goal-meta-item">
+                    <span class="goal-meta-label">Related Matches:</span>
+                    <span>${goal.match_count} matches</span>
+                </div>
+            </div>
+            <div class="goal-actions">
+                <button class="btn-goal-action btn-advice" onclick="showAdvice(${goal.id})">Get Advice</button>
+                ${goal.status === 'active' ? `<button class="btn-goal-action btn-complete" onclick="markGoalComplete(${goal.id})">Mark Complete</button>` : ''}
+                <button class="btn-goal-action btn-delete" onclick="deleteGoal(${goal.id})">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+// Toggle goal form visibility
+function toggleGoalForm() {
+    const goalForm = document.getElementById('goalForm');
+    goalForm.style.display = goalForm.style.display === 'none' ? 'block' : 'none';
+}
+
+// Handle goal form submission
+async function handleGoalFormSubmit(e) {
+    e.preventDefault();
+
+    const formData = {
+        title: document.getElementById('goalTitle').value,
+        description: document.getElementById('goalDescription').value,
+        target_date: document.getElementById('goalTargetDate').value
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/goals`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Reset form and hide it
+            document.getElementById('goalFormElement').reset();
+            document.getElementById('goalForm').style.display = 'none';
+
+            // Reload goals
+            loadGoals();
+
+            alert('Goal created successfully!');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to create goal. Please try again.');
+    }
+}
+
+// Delete a goal
+async function deleteGoal(goalId) {
+    if (!confirm('Are you sure you want to delete this goal? This will also remove all match associations.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/goals/${goalId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            loadGoals();
+            alert('Goal deleted successfully!');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete goal. Please try again.');
+    }
+}
+
+// Mark goal as complete
+async function markGoalComplete(goalId) {
+    try {
+        const response = await fetch(`${API_URL}/goals/${goalId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'completed' })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            loadGoals();
+            alert('Goal marked as complete!');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update goal. Please try again.');
+    }
+}
+
+// Show advice modal for a goal
+async function showAdvice(goalId) {
+    try {
+        const response = await fetch(`${API_URL}/goals/${goalId}/advice`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        const goal = data.goal;
+        const analysis = data.analysis;
+
+        // Update modal title
+        document.getElementById('adviceGoalTitle').textContent = `Analysis: ${goal.title}`;
+
+        // Build advice body HTML
+        let adviceHTML = '';
+
+        // Overview stats
+        adviceHTML += '<div class="advice-section">';
+        adviceHTML += '<h4>Overview</h4>';
+        adviceHTML += `<div class="advice-stat">Matches Tracked: ${analysis.match_count}</div>`;
+        adviceHTML += `<div class="advice-stat">Matches with Notes: ${analysis.notes_with_content}</div>`;
+        if (analysis.days_until_deadline !== null) {
+            const daysText = analysis.days_until_deadline < 0
+                ? `${Math.abs(analysis.days_until_deadline)} days overdue`
+                : `${analysis.days_until_deadline} days remaining`;
+            adviceHTML += `<div class="advice-stat">Timeline: ${daysText}</div>`;
+        }
+        adviceHTML += '</div>';
+
+        // Patterns detected
+        if (analysis.patterns.techniques_mentioned.length > 0) {
+            adviceHTML += '<div class="advice-section">';
+            adviceHTML += '<h4>Techniques Mentioned</h4>';
+            adviceHTML += '<ul>';
+            analysis.patterns.techniques_mentioned.forEach(technique => {
+                adviceHTML += `<li>${technique}</li>`;
+            });
+            adviceHTML += '</ul>';
+            adviceHTML += '</div>';
+        }
+
+        // Sentiment analysis
+        adviceHTML += '<div class="advice-section">';
+        adviceHTML += '<h4>Progress Indicators</h4>';
+        adviceHTML += `<div class="advice-stat">Positive notes: ${analysis.patterns.positive_indicators}</div>`;
+        adviceHTML += `<div class="advice-stat">Challenges noted: ${analysis.patterns.struggle_indicators}</div>`;
+        adviceHTML += '</div>';
+
+        // Suggestions
+        if (analysis.suggestions.length > 0) {
+            adviceHTML += '<div class="advice-section">';
+            adviceHTML += '<h4>Personalized Suggestions</h4>';
+            analysis.suggestions.forEach(suggestion => {
+                adviceHTML += `<div class="advice-suggestion">${suggestion}</div>`;
+            });
+            adviceHTML += '</div>';
+        }
+
+        // Set modal content
+        document.getElementById('adviceBody').innerHTML = adviceHTML;
+
+        // Show modal
+        document.getElementById('adviceModal').style.display = 'flex';
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load advice. Please try again.');
+    }
+}
+
+// Close advice modal
+function closeAdviceModal() {
+    document.getElementById('adviceModal').style.display = 'none';
 }

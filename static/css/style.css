@@ -327,4 +327,368 @@ header h1 {
     header h1 {
         font-size: 2em;
     }
+
+    .goals-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-secondary {
+        margin-top: 10px;
+    }
+}
+
+/* Goals & Milestones */
+.goals-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.goals-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.goals-header h2 {
+    margin: 0;
+    color: #667eea;
+}
+
+.btn-secondary {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-cancel {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-cancel:hover {
+    background: #4b5563;
+}
+
+.goal-form {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.goals-list {
+    display: grid;
+    gap: 15px;
+}
+
+.goal-card {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.goal-card:hover {
+    transform: translateX(5px);
+}
+
+.goal-card.completed {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+}
+
+.goal-card.archived {
+    border-left-color: #6b7280;
+    background: #f3f4f6;
+    opacity: 0.7;
+}
+
+.goal-header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.goal-title {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.goal-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.goal-status-badge.active {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.goal-status-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.goal-status-badge.archived {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.goal-description {
+    color: #666;
+    font-size: 0.95em;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.goal-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.goal-meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.goal-meta-label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.goal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-goal-action {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-advice {
+    background: #667eea;
+    color: white;
+}
+
+.btn-advice:hover {
+    background: #5568d3;
+}
+
+.btn-edit {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #d97706;
+}
+
+.btn-delete {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+}
+
+.btn-complete {
+    background: #10b981;
+    color: white;
+}
+
+.btn-complete:hover {
+    background: #059669;
+}
+
+.no-goals {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Advice Modal */
+.advice-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.advice-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.advice-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 2;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.advice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.advice-header h3 {
+    margin: 0;
+    color: #667eea;
+    font-size: 1.5em;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #6b7280;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #f3f4f6;
+    color: #333;
+}
+
+.advice-body {
+    padding: 20px;
+}
+
+.advice-section {
+    margin-bottom: 20px;
+}
+
+.advice-section h4 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.advice-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.advice-section li {
+    padding: 8px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.advice-section li:before {
+    content: "•";
+    color: #667eea;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.advice-stat {
+    display: inline-block;
+    background: #f3f4f6;
+    padding: 4px 12px;
+    border-radius: 6px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.advice-suggestion {
+    background: #eff6ff;
+    border-left: 3px solid #667eea;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.deadline-warning {
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    color: #92400e;
+}
+
+.deadline-urgent {
+    background: #fee2e2;
+    border-left: 3px solid #ef4444;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    color: #991b1b;
 }
