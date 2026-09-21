@@ -7,70 +7,70 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎾 Tennis Match Tracker</h1>
-            <p class="subtitle">Track your matches and analyze your performance</p>
-        </header>
+
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <span class="header-title">Tennis Match Tracker</span>
+                <span class="header-divider">|</span>
+                <span class="header-sub">Match Journal for Players &amp; Coaches</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
 
         <!-- Stats Dashboard -->
-        <div class="stats-container" id="statsContainer">
+        <section class="stats-row" id="statsContainer">
             <div class="stat-card">
                 <div class="stat-value" id="totalMatches">0</div>
-                <div class="stat-label">Total Matches</div>
+                <div class="stat-label">Matches</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="wins">0</div>
+                <div class="stat-value win-text" id="wins">0</div>
                 <div class="stat-label">Wins</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="losses">0</div>
+                <div class="stat-value loss-text" id="losses">0</div>
                 <div class="stat-label">Losses</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="winPercentage">0%</div>
+                <div class="stat-value" id="winPercentage">—</div>
                 <div class="stat-label">Win Rate</div>
             </div>
-        </div>
+        </section>
 
         <!-- Recent Form -->
-        <div class="recent-form" id="recentForm"></div>
+        <div class="recent-form" id="recentForm" style="display:none;"></div>
 
         <!-- Advanced Stats Dashboard -->
-        <div class="advanced-stats-container" id="advancedStatsContainer" style="display: none;">
-            <h2>Advanced Stats</h2>
-            <div class="stats-container advanced-stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value adv-value" id="firstServePct">—</div>
-                    <div class="stat-label">1st Serve %</div>
+        <section class="card" id="advancedStatsContainer" style="display: none;">
+            <h2 class="section-title">Advanced Stats</h2>
+            <div class="adv-stats-row">
+                <div class="adv-stat">
+                    <div class="adv-value" id="bpConversionPct">—</div>
+                    <div class="adv-label">BP Conversion</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value adv-value" id="firstServeWinPct">—</div>
-                    <div class="stat-label">1st Serve Win %</div>
+                <div class="adv-stat">
+                    <div class="adv-value" id="bpSavePct">—</div>
+                    <div class="adv-label">BP Save %</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value adv-value" id="bpConversionPct">—</div>
-                    <div class="stat-label">BP Conversion</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value adv-value" id="bpSavePct">—</div>
-                    <div class="stat-label">BP Save %</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value adv-value" id="avgUEPerSet">—</div>
-                    <div class="stat-label">Avg UE / Set</div>
+                <div class="adv-stat">
+                    <div class="adv-value" id="avgUEPerSet">—</div>
+                    <div class="adv-label">Avg UE / Set</div>
                 </div>
             </div>
-            <div id="ueBySetContainer" class="ue-by-set" style="display: none;">
-                <div class="ue-by-set-label">Unforced Errors by Set</div>
-                <div id="ueBySet" class="ue-by-set-bars"></div>
+            <div id="ueBySetContainer" style="display: none;">
+                <div class="chart-label">Unforced Errors by Set (avg)</div>
+                <div id="ueBySet" class="ue-bars"></div>
             </div>
-        </div>
+        </section>
 
-        <!-- Add Match Form -->
-        <div class="form-container">
-            <h2>Log New Match</h2>
+        <!-- Log Match Form -->
+        <section class="card">
+            <h2 class="section-title">Log a Match</h2>
             <form id="matchForm">
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="date">Date</label>
@@ -80,18 +80,21 @@
                         <label for="opponent">Opponent</label>
                         <input type="text" id="opponent" name="opponent" placeholder="Opponent name" required>
                     </div>
+                    <div class="form-group">
+                        <label for="opponentUtr">Opponent UTR <span class="optional">optional</span></label>
+                        <input type="number" id="opponentUtr" name="opponent_utr" placeholder="e.g. 8.5" min="1" max="16.5" step="0.1">
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label for="setScores">Set Scores</label>
-                    <input type="text" id="setScores" name="set_scores" placeholder="e.g., 6-4 6-3 or 6-4, 7-5" required>
-                    <small style="color: #666; font-size: 0.85em; margin-top: 5px; display: block;">Enter scores for each set separated by spaces or commas (e.g., "6-4 6-3" or "7-6 6-4")</small>
+                    <input type="text" id="setScores" name="set_scores" placeholder="e.g. 6-4 6-3 or 6-4, 7-6" required>
+                    <span class="field-hint">Separate sets with a space or comma</span>
                 </div>
 
                 <div class="form-group" id="tiebreakGroup" style="display: none;">
-                    <label for="tiebreakScores">Tiebreak Scores (Optional)</label>
-                    <input type="text" id="tiebreakScores" name="tiebreak_scores" placeholder="e.g., 7-5 or 7-5, 10-8">
-                    <small style="color: #666; font-size: 0.85em; margin-top: 5px; display: block;">Enter tiebreak scores if any set was 7-6</small>
+                    <label for="tiebreakScores">Tiebreak Scores <span class="optional">optional</span></label>
+                    <input type="text" id="tiebreakScores" name="tiebreak_scores" placeholder="e.g. 7-5 or 7-5, 10-8">
                 </div>
 
                 <div class="form-row">
@@ -118,85 +121,73 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="notes">Notes (Optional)</label>
-                    <textarea id="notes" name="notes" rows="3" placeholder="Match notes, key moments, areas to improve... Tip: Mention your active goals to track progress!"></textarea>
+                    <label for="notes">
+                        Match Notes
+                        <span class="required-badge">required</span>
+                    </label>
+                    <textarea id="notes" name="notes" rows="5"
+                        placeholder="What happened in this match? What did you do well? What broke down? What do you want to work on before the next one?"
+                        required></textarea>
+                    <span class="field-hint">These notes are for you and your coach — be specific and honest.</span>
                 </div>
 
-                <!-- Advanced Stats Toggle -->
-                <button type="button" class="btn-advanced-toggle" id="toggleAdvancedStats">
-                    + Advanced Stats (Optional)
+                <!-- Optional Stats Toggle -->
+                <button type="button" class="btn-toggle-adv" id="toggleAdvancedStats">
+                    + Additional Stats <span class="optional">break points &amp; unforced errors</span>
                 </button>
 
                 <div id="advancedStatsForm" style="display: none;">
-                    <div class="advanced-stats-divider">First Serve</div>
-                    <div class="form-row form-row-three">
-                        <div class="form-group">
-                            <label for="firstServesAttempted">Attempted</label>
-                            <input type="number" id="firstServesAttempted" min="0" placeholder="e.g., 40">
-                        </div>
-                        <div class="form-group">
-                            <label for="firstServesIn">In</label>
-                            <input type="number" id="firstServesIn" min="0" placeholder="e.g., 28">
-                        </div>
-                        <div class="form-group">
-                            <label for="firstServePointsWon">Points Won</label>
-                            <input type="number" id="firstServePointsWon" min="0" placeholder="e.g., 22">
-                        </div>
-                    </div>
-
-                    <div class="advanced-stats-divider">Break Points</div>
+                    <div class="adv-section-label">Break Points</div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="bpOpportunities">Opportunities (your BP chances)</label>
-                            <input type="number" id="bpOpportunities" min="0" placeholder="e.g., 5">
+                            <label for="bpOpportunities">Your opportunities</label>
+                            <input type="number" id="bpOpportunities" min="0" placeholder="e.g. 5">
                         </div>
                         <div class="form-group">
                             <label for="bpConverted">Converted</label>
-                            <input type="number" id="bpConverted" min="0" placeholder="e.g., 3">
+                            <input type="number" id="bpConverted" min="0" placeholder="e.g. 3">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="bpFaced">Faced (opponent's BP chances)</label>
-                            <input type="number" id="bpFaced" min="0" placeholder="e.g., 4">
+                            <label for="bpFaced">Opponent opportunities</label>
+                            <input type="number" id="bpFaced" min="0" placeholder="e.g. 4">
                         </div>
                         <div class="form-group">
-                            <label for="bpSaved">Saved</label>
-                            <input type="number" id="bpSaved" min="0" placeholder="e.g., 2">
+                            <label for="bpSaved">You saved</label>
+                            <input type="number" id="bpSaved" min="0" placeholder="e.g. 2">
                         </div>
                     </div>
 
-                    <div class="advanced-stats-divider">Unforced Errors</div>
+                    <div class="adv-section-label">Unforced Errors by Set</div>
                     <div class="form-group">
-                        <label for="unforcedErrorsBySet">Errors by Set</label>
-                        <input type="text" id="unforcedErrorsBySet" placeholder="e.g., 8,5,3  (one number per set, comma-separated)">
+                        <input type="text" id="unforcedErrorsBySet" placeholder="e.g. 8,5,3 — one number per set">
                     </div>
                 </div>
 
                 <button type="submit" class="btn-primary">Add Match</button>
             </form>
-        </div>
+        </section>
 
-        <!-- Surface Stats -->
-        <div class="surface-stats-container" id="surfaceStatsContainer">
-            <h2>Performance by Surface</h2>
-            <div id="surfaceStats" class="surface-stats"></div>
-        </div>
+        <!-- Performance by Surface -->
+        <section class="card" id="surfaceStatsContainer">
+            <h2 class="section-title">By Surface</h2>
+            <div id="surfaceStats"></div>
+        </section>
 
         <!-- Goals & Milestones -->
-        <div class="goals-container">
-            <div class="goals-header">
-                <h2>Goals & Milestones</h2>
-                <button type="button" class="btn-secondary" id="toggleGoalForm">+ New Goal</button>
+        <section class="card goals-container">
+            <div class="section-header">
+                <h2 class="section-title" style="margin-bottom:0;">Goals &amp; Milestones</h2>
+                <button type="button" class="btn-outline" id="toggleGoalForm">+ New Goal</button>
             </div>
 
-            <!-- Goal Form -->
-            <div id="goalForm" class="goal-form" style="display: none;">
+            <div id="goalForm" class="goal-form-wrap" style="display: none;">
                 <form id="goalFormElement">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="goalTitle">Goal Title</label>
-                            <input type="text" id="goalTitle" name="title" placeholder="e.g., Reach 9 UTR by March" required>
+                            <label for="goalTitle">Goal</label>
+                            <input type="text" id="goalTitle" name="title" placeholder="e.g. Reach 9 UTR by March" required>
                         </div>
                         <div class="form-group">
                             <label for="goalTargetDate">Target Date</label>
@@ -204,40 +195,38 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="goalDescription">Description (Optional)</label>
-                        <textarea id="goalDescription" name="description" rows="2" placeholder="e.g., Focus on consistency and finishing points at the net"></textarea>
+                        <label for="goalDescription">Description <span class="optional">optional</span></label>
+                        <textarea id="goalDescription" name="description" rows="2" placeholder="What does achieving this look like?"></textarea>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn-primary">Create Goal</button>
-                        <button type="button" class="btn-cancel" id="cancelGoalForm">Cancel</button>
+                        <button type="submit" class="btn-primary btn-sm">Create Goal</button>
+                        <button type="button" class="btn-ghost" id="cancelGoalForm">Cancel</button>
                     </div>
                 </form>
             </div>
 
-            <!-- Goals List -->
             <div id="goalsList" class="goals-list"></div>
-        </div>
+        </section>
 
         <!-- Advice Modal -->
-        <div id="adviceModal" class="advice-modal" style="display: none;">
-            <div class="advice-modal-overlay" id="adviceModalOverlay"></div>
-            <div class="advice-content">
-                <div class="advice-header">
+        <div id="adviceModal" class="modal" style="display: none;">
+            <div class="modal-overlay" id="adviceModalOverlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
                     <h3 id="adviceGoalTitle">Goal Analysis</h3>
-                    <button class="close-btn" id="closeAdviceModal">&times;</button>
+                    <button class="modal-close" id="closeAdviceModal">&times;</button>
                 </div>
-                <div class="advice-body" id="adviceBody">
-                    <!-- Advice content will be populated by JavaScript -->
-                </div>
+                <div class="modal-body" id="adviceBody"></div>
             </div>
         </div>
 
         <!-- Match History -->
-        <div class="matches-container">
-            <h2>Match History</h2>
+        <section class="card">
+            <h2 class="section-title">Match History</h2>
             <div id="matchesList" class="matches-list"></div>
-        </div>
-    </div>
+        </section>
+
+    </main>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

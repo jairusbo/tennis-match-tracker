@@ -109,6 +109,7 @@ def init_db():
             ('break_points_faced', 'INTEGER DEFAULT 0'),
             ('break_points_saved', 'INTEGER DEFAULT 0'),
             ('unforced_errors_by_set', "TEXT DEFAULT ''"),
+            ('opponent_utr', "REAL DEFAULT NULL"),
         ]
         for col_name, col_def in advanced_cols:
             if col_name not in existing_cols:
@@ -186,21 +187,22 @@ def add_match():
                 return 0
 
         db = get_db()
+        try:
+            opp_utr = float(data['opponent_utr']) if data.get('opponent_utr') not in (None, '') else None
+        except (ValueError, TypeError):
+            opp_utr = None
+
         db.execute('''
-            INSERT INTO matches (date, opponent, set_scores, tiebreak_scores, your_sets_won, opponent_sets_won,
-                                 surface, match_type, notes,
-                                 first_serves_attempted, first_serves_in, first_serve_points_won,
+            INSERT INTO matches (date, opponent, opponent_utr, set_scores, tiebreak_scores,
+                                 your_sets_won, opponent_sets_won, surface, match_type, notes,
                                  break_points_opportunities, break_points_converted,
                                  break_points_faced, break_points_saved,
                                  unforced_errors_by_set)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            data['date'], data['opponent'], data['set_scores'],
+            data['date'], data['opponent'], opp_utr, data['set_scores'],
             data.get('tiebreak_scores', ''), your_sets, opp_sets,
             data['surface'], data['match_type'], data.get('notes', ''),
-            _int(data.get('first_serves_attempted')),
-            _int(data.get('first_serves_in')),
-            _int(data.get('first_serve_points_won')),
             _int(data.get('break_points_opportunities')),
             _int(data.get('break_points_converted')),
             _int(data.get('break_points_faced')),

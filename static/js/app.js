@@ -1,71 +1,57 @@
-// API base URL
 const API_URL = '/api';
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Set today's date as default
+document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('date').valueAsDate = new Date();
 
-    // Load initial data
     loadMatches();
     loadStats();
     loadGoals();
 
-    // Set up form submission
     document.getElementById('matchForm').addEventListener('submit', handleFormSubmit);
 
-    // Show tiebreak field based on set scores
-    document.getElementById('setScores').addEventListener('input', function(e) {
-        const setScores = e.target.value;
-        const tiebreakGroup = document.getElementById('tiebreakGroup');
-
-        // Check if any set is 7-6 or 6-7
-        if (setScores.includes('7-6') || setScores.includes('6-7')) {
-            tiebreakGroup.style.display = 'block';
+    document.getElementById('setScores').addEventListener('input', function (e) {
+        const val = e.target.value;
+        const group = document.getElementById('tiebreakGroup');
+        if (val.includes('7-6') || val.includes('6-7')) {
+            group.style.display = 'block';
         } else {
-            tiebreakGroup.style.display = 'none';
+            group.style.display = 'none';
             document.getElementById('tiebreakScores').value = '';
         }
     });
 
-    // Advanced stats form toggle
-    document.getElementById('toggleAdvancedStats').addEventListener('click', function() {
+    document.getElementById('toggleAdvancedStats').addEventListener('click', function () {
         const form = document.getElementById('advancedStatsForm');
-        const isHidden = form.style.display === 'none';
-        form.style.display = isHidden ? 'block' : 'none';
-        this.textContent = isHidden ? '− Advanced Stats (Optional)' : '+ Advanced Stats (Optional)';
+        const open = form.style.display === 'none';
+        form.style.display = open ? 'block' : 'none';
+        this.textContent = open
+            ? '− Additional Stats'
+            : '+ Additional Stats  break points & unforced errors';
     });
 
-    // Goal form toggle
     document.getElementById('toggleGoalForm').addEventListener('click', toggleGoalForm);
-    document.getElementById('cancelGoalForm').addEventListener('click', function() {
+    document.getElementById('cancelGoalForm').addEventListener('click', function () {
         document.getElementById('goalForm').style.display = 'none';
         document.getElementById('goalFormElement').reset();
     });
-
-    // Goal form submission
     document.getElementById('goalFormElement').addEventListener('submit', handleGoalFormSubmit);
-
-    // Close advice modal
     document.getElementById('closeAdviceModal').addEventListener('click', closeAdviceModal);
     document.getElementById('adviceModalOverlay').addEventListener('click', closeAdviceModal);
 });
 
-// Handle form submission
+// ── Form submit ───────────────────────────────────────────
 async function handleFormSubmit(e) {
     e.preventDefault();
 
     const formData = {
         date: document.getElementById('date').value,
         opponent: document.getElementById('opponent').value,
+        opponent_utr: document.getElementById('opponentUtr').value,
         set_scores: document.getElementById('setScores').value,
         tiebreak_scores: document.getElementById('tiebreakScores').value,
         surface: document.getElementById('surface').value,
         match_type: document.getElementById('matchType').value,
         notes: document.getElementById('notes').value,
-        first_serves_attempted: document.getElementById('firstServesAttempted').value,
-        first_serves_in: document.getElementById('firstServesIn').value,
-        first_serve_points_won: document.getElementById('firstServePointsWon').value,
         break_points_opportunities: document.getElementById('bpOpportunities').value,
         break_points_converted: document.getElementById('bpConverted').value,
         break_points_faced: document.getElementById('bpFaced').value,
@@ -74,510 +60,309 @@ async function handleFormSubmit(e) {
     };
 
     try {
-        const response = await fetch(`${API_URL}/matches`, {
+        const res = await fetch(`${API_URL}/matches`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
         });
+        const result = await res.json();
 
-        const result = await response.json();
-
-        if (response.ok) {
-            // Reset form
+        if (res.ok) {
             document.getElementById('matchForm').reset();
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('tiebreakGroup').style.display = 'none';
             document.getElementById('advancedStatsForm').style.display = 'none';
-            document.getElementById('toggleAdvancedStats').textContent = '+ Advanced Stats (Optional)';
-
-            // Reload data
+            document.getElementById('toggleAdvancedStats').textContent = '+ Additional Stats  break points & unforced errors';
             loadMatches();
             loadStats();
             loadGoals();
-
-            // Show success message
-            alert('Match added successfully!');
         } else {
             alert('Error: ' + (result.error || 'Failed to add match'));
         }
-    } catch (error) {
-        console.error('Error:', error);
+    } catch (err) {
         alert('Failed to add match. Please try again.');
     }
 }
 
-// Load all matches
+// ── Match list ────────────────────────────────────────────
 async function loadMatches() {
     try {
-        const response = await fetch(`${API_URL}/matches`);
-        const matches = await response.json();
-
-        const matchesList = document.getElementById('matchesList');
+        const res = await fetch(`${API_URL}/matches`);
+        const matches = await res.json();
+        const el = document.getElementById('matchesList');
 
         if (matches.length === 0) {
-            matchesList.innerHTML = '<div class="no-matches">No matches logged yet. Add your first match above!</div>';
+            el.innerHTML = '<div class="no-items">No matches logged yet.</div>';
             return;
         }
 
-        matchesList.innerHTML = matches.map(match => createMatchCard(match)).join('');
+        el.innerHTML = matches.map(createMatchCard).join('');
 
-        // Add delete button listeners
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                deleteMatch(this.dataset.matchId);
-            });
+        document.querySelectorAll('.match-delete').forEach(btn => {
+            btn.addEventListener('click', function () { deleteMatch(this.dataset.id); });
         });
-    } catch (error) {
-        console.error('Error loading matches:', error);
+    } catch (err) {
+        console.error(err);
     }
 }
 
-// Create match card HTML
 function createMatchCard(match) {
-    const isWin = match.your_sets_won > match.opponent_sets_won;
-    const resultClass = isWin ? 'win' : 'loss';
-    const resultText = isWin ? 'WIN' : 'LOSS';
-    const setScores = match.set_scores;
-    const tiebreakScores = match.tiebreak_scores;
+    const win = match.your_sets_won > match.opponent_sets_won;
+    const cls = win ? 'win' : 'loss';
+    const label = win ? 'WIN' : 'LOSS';
+    const utrTag = match.opponent_utr ? `<span class="match-utr">UTR ${match.opponent_utr}</span>` : '';
+
+    const chips = [];
+    if (match.break_points_opportunities > 0)
+        chips.push(`BP Conv: ${match.break_points_converted}/${match.break_points_opportunities}`);
+    if (match.break_points_faced > 0)
+        chips.push(`BP Saved: ${match.break_points_saved}/${match.break_points_faced}`);
+    if (match.unforced_errors_by_set)
+        chips.push(`UE by set: ${match.unforced_errors_by_set}`);
+
+    const advHTML = chips.length
+        ? `<div class="match-adv-stats">${chips.map(c => `<span class="adv-chip">${c}</span>`).join('')}</div>`
+        : '';
 
     return `
-        <div class="match-card ${resultClass}">
-            <button class="delete-btn" data-match-id="${match.id}">Delete</button>
-            <div class="match-header">
-                <div class="match-result ${resultClass}">${resultText}</div>
-                <div class="match-date">${formatDate(match.date)}</div>
+        <div class="match-card ${cls}">
+            <button class="match-delete" data-id="${match.id}">Delete</button>
+            <div class="match-top">
+                <div>
+                    <span class="match-opponent">${match.opponent}</span>${utrTag}
+                </div>
+                <span class="match-result-badge ${cls}">${label}</span>
             </div>
-            <div class="match-details">
-                <div class="match-detail"><strong>Opponent:</strong> ${match.opponent}</div>
-                <div class="match-detail"><strong>Score:</strong> ${setScores}${tiebreakScores ? ` (${tiebreakScores})` : ''}</div>
-                <div class="match-detail"><strong>Sets:</strong> ${match.your_sets_won}-${match.opponent_sets_won}</div>
-                <div class="match-detail"><strong>Surface:</strong> ${match.surface}</div>
-                <div class="match-detail"><strong>Type:</strong> ${match.match_type}</div>
+            <div class="match-meta">
+                <div>${formatDate(match.date)}</div>
+                <div><strong>${match.set_scores}</strong>${match.tiebreak_scores ? ` (${match.tiebreak_scores})` : ''}</div>
+                <div>${match.surface}</div>
+                <div>${match.match_type}</div>
             </div>
-            ${match.notes ? `<div class="match-notes">${match.notes}</div>` : ''}
-            ${buildMatchAdvancedStats(match)}
-        </div>
-    `;
+            ${match.notes ? `<div class="match-notes-text">${match.notes}</div>` : ''}
+            ${advHTML}
+        </div>`;
 }
 
-// Build per-match advanced stats snippet
-function buildMatchAdvancedStats(match) {
-    const chips = [];
-
-    if (match.first_serves_attempted > 0) {
-        const fsPct = Math.round(match.first_serves_in / match.first_serves_attempted * 100);
-        chips.push(`1st Serve: ${fsPct}%`);
-        if (match.first_serves_in > 0) {
-            const fsWinPct = Math.round(match.first_serve_points_won / match.first_serves_in * 100);
-            chips.push(`1st Srv Win: ${fsWinPct}%`);
-        }
-    }
-    if (match.break_points_opportunities > 0) {
-        chips.push(`BP Conv: ${match.break_points_converted}/${match.break_points_opportunities}`);
-    }
-    if (match.break_points_faced > 0) {
-        chips.push(`BP Saved: ${match.break_points_saved}/${match.break_points_faced}`);
-    }
-    if (match.unforced_errors_by_set) {
-        chips.push(`UE by set: ${match.unforced_errors_by_set}`);
-    }
-
-    if (chips.length === 0) return '';
-    return `<div class="match-adv-stats">${chips.map(c => `<span class="adv-chip">${c}</span>`).join('')}</div>`;
-}
-
-// Delete a match
-async function deleteMatch(matchId) {
-    if (!confirm('Are you sure you want to delete this match?')) {
-        return;
-    }
-
+async function deleteMatch(id) {
+    if (!confirm('Delete this match?')) return;
     try {
-        const response = await fetch(`${API_URL}/matches/${matchId}`, {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            loadMatches();
-            loadStats();
-        } else {
-            alert('Failed to delete match');
-        }
-    } catch (error) {
-        console.error('Error deleting match:', error);
-        alert('Failed to delete match. Please try again.');
-    }
+        const res = await fetch(`${API_URL}/matches/${id}`, { method: 'DELETE' });
+        if (res.ok) { loadMatches(); loadStats(); }
+    } catch (err) { alert('Failed to delete match.'); }
 }
 
-// Load statistics
+// ── Stats ─────────────────────────────────────────────────
 async function loadStats() {
     try {
-        const response = await fetch(`${API_URL}/stats`);
-        const stats = await response.json();
+        const res = await fetch(`${API_URL}/stats`);
+        const stats = await res.json();
 
-        // Update stat cards
         document.getElementById('totalMatches').textContent = stats.total_matches;
         document.getElementById('wins').textContent = stats.wins;
         document.getElementById('losses').textContent = stats.losses;
-        document.getElementById('winPercentage').textContent = stats.win_percentage + '%';
+        document.getElementById('winPercentage').textContent =
+            stats.total_matches > 0 ? stats.win_percentage + '%' : '—';
 
-        // Display recent form
         displayRecentForm(stats.recent_form);
-
-        // Display surface stats
         displaySurfaceStats(stats.surface_stats);
-
-        // Display advanced stats
         displayAdvancedStats(stats.advanced_stats);
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// Display recent form
-function displayRecentForm(recentForm) {
-    const recentFormContainer = document.getElementById('recentForm');
-
-    if (recentForm.length === 0) {
-        recentFormContainer.style.display = 'none';
-        return;
-    }
-
-    recentFormContainer.style.display = 'block';
-    recentFormContainer.innerHTML = `
-        <strong>Recent Form (Last ${recentForm.length} matches):</strong>
-        <div style="margin-top: 10px;">
-            ${recentForm.map(result => `
-                <span class="form-badge ${result === 'W' ? 'win' : 'loss'}">${result}</span>
-            `).join('')}
-        </div>
-    `;
+function displayRecentForm(form) {
+    const el = document.getElementById('recentForm');
+    if (!form || form.length === 0) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    el.innerHTML = `
+        <span class="form-label">Recent form</span>
+        <div class="form-badges">
+            ${form.map(r => `<span class="form-badge ${r === 'W' ? 'win' : 'loss'}">${r}</span>`).join('')}
+        </div>`;
 }
 
-// Display surface statistics
 function displaySurfaceStats(surfaceStats) {
-    const surfaceStatsContainer = document.getElementById('surfaceStats');
-
-    if (surfaceStats.length === 0) {
-        surfaceStatsContainer.innerHTML = '<div class="no-matches">No surface data available yet.</div>';
+    const el = document.getElementById('surfaceStats');
+    if (!surfaceStats || surfaceStats.length === 0) {
+        el.innerHTML = '<div class="no-items">No data yet.</div>';
         return;
     }
-
-    surfaceStatsContainer.innerHTML = surfaceStats.map(stat => {
-        const winRate = stat.total > 0 ? ((stat.wins / stat.total) * 100).toFixed(1) : 0;
+    el.innerHTML = surfaceStats.map(s => {
+        const pct = s.total > 0 ? ((s.wins / s.total) * 100).toFixed(1) : 0;
         return `
-            <div class="surface-stat-item">
-                <div class="surface-name">${stat.surface}</div>
-                <div class="surface-record">
-                    ${stat.wins}W - ${stat.losses}L (${winRate}% win rate)
-                </div>
-            </div>
-        `;
+            <div class="surface-item">
+                <span class="surface-name">${s.surface}</span>
+                <span class="surface-record">${s.wins}W – ${s.losses}L &nbsp;·&nbsp; ${pct}%</span>
+            </div>`;
     }).join('');
 }
 
-// Display advanced stats dashboard
 function displayAdvancedStats(adv) {
     const container = document.getElementById('advancedStatsContainer');
-    const hasAnyData = adv.first_serve_pct !== null || adv.bp_conversion_pct !== null || adv.avg_ue_per_set !== null;
-
-    if (!hasAnyData) {
-        container.style.display = 'none';
-        return;
-    }
+    const hasData = adv.bp_conversion_pct !== null || adv.avg_ue_per_set !== null;
+    if (!hasData) { container.style.display = 'none'; return; }
 
     container.style.display = 'block';
-
-    const fmt = val => val !== null ? val + '%' : '—';
-    document.getElementById('firstServePct').textContent = fmt(adv.first_serve_pct);
-    document.getElementById('firstServeWinPct').textContent = fmt(adv.first_serve_win_pct);
+    const fmt = v => v !== null ? v + '%' : '—';
     document.getElementById('bpConversionPct').textContent = fmt(adv.bp_conversion_pct);
     document.getElementById('bpSavePct').textContent = fmt(adv.bp_save_pct);
     document.getElementById('avgUEPerSet').textContent = adv.avg_ue_per_set !== null ? adv.avg_ue_per_set : '—';
 
-    // UE by set breakdown
-    const ueBySet = adv.avg_ue_by_set;
-    const ueContainer = document.getElementById('ueBySetContainer');
+    const ueBySet = adv.avg_ue_by_set || {};
+    const ueWrap = document.getElementById('ueBySetContainer');
     const ueEl = document.getElementById('ueBySet');
 
     if (Object.keys(ueBySet).length > 0) {
-        ueContainer.style.display = 'block';
-        const maxVal = Math.max(...Object.values(ueBySet));
-        ueEl.innerHTML = Object.entries(ueBySet).map(([key, val]) => {
-            const label = key.replace('_', ' ').replace('set', 'Set');
-            const barWidth = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
+        ueWrap.style.display = 'block';
+        const max = Math.max(...Object.values(ueBySet));
+        ueEl.innerHTML = Object.entries(ueBySet).map(([k, v]) => {
+            const label = k.replace('_', ' ').replace('set', 'Set');
+            const w = max > 0 ? Math.round((v / max) * 100) : 0;
             return `
                 <div class="ue-bar-row">
                     <div class="ue-bar-label">${label}</div>
-                    <div class="ue-bar-track">
-                        <div class="ue-bar-fill" style="width: ${barWidth}%"></div>
-                    </div>
-                    <div class="ue-bar-value">${val} avg</div>
+                    <div class="ue-bar-track"><div class="ue-bar-fill" style="width:${w}%"></div></div>
+                    <div class="ue-bar-value">${v} avg</div>
                 </div>`;
         }).join('');
     } else {
-        ueContainer.style.display = 'none';
+        ueWrap.style.display = 'none';
     }
 }
 
-// Format date for display
-function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
-}
-
-// ===== GOALS & MILESTONES FUNCTIONS =====
-
-// Load and display goals
+// ── Goals ─────────────────────────────────────────────────
 async function loadGoals() {
     try {
-        const response = await fetch(`${API_URL}/goals`);
-        const goals = await response.json();
-
-        const goalsList = document.getElementById('goalsList');
+        const res = await fetch(`${API_URL}/goals`);
+        const goals = await res.json();
+        const el = document.getElementById('goalsList');
 
         if (goals.length === 0) {
-            goalsList.innerHTML = '<div class="no-goals">No goals set yet. Create your first goal above!</div>';
+            el.innerHTML = '<div class="no-items">No goals yet.</div>';
             return;
         }
-
-        goalsList.innerHTML = goals.map(goal => createGoalCard(goal)).join('');
-    } catch (error) {
-        console.error('Error loading goals:', error);
-    }
+        el.innerHTML = goals.map(createGoalCard).join('');
+    } catch (err) { console.error(err); }
 }
 
-// Create a goal card HTML
 function createGoalCard(goal) {
-    const targetDate = new Date(goal.target_date);
-    const today = new Date();
-    const daysUntil = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
-
-    let deadlineText = '';
-    let deadlineClass = '';
-
-    if (daysUntil < 0) {
-        deadlineText = `${Math.abs(daysUntil)} days overdue`;
-        deadlineClass = 'deadline-urgent';
-    } else if (daysUntil === 0) {
-        deadlineText = 'Due today!';
-        deadlineClass = 'deadline-urgent';
-    } else if (daysUntil < 7) {
-        deadlineText = `${daysUntil} days left`;
-        deadlineClass = 'deadline-urgent';
-    } else if (daysUntil < 30) {
-        deadlineText = `${daysUntil} days left`;
-        deadlineClass = 'deadline-warning';
-    } else {
-        deadlineText = `${daysUntil} days left`;
-        deadlineClass = '';
-    }
-
-    const statusBadge = `<span class="goal-status-badge ${goal.status}">${goal.status.toUpperCase()}</span>`;
+    const target = new Date(goal.target_date);
+    const days = Math.ceil((target - new Date()) / 86400000);
+    const daysText = days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`;
 
     return `
         <div class="goal-card ${goal.status}">
-            <div class="goal-header-section">
-                <div>
-                    <div class="goal-title">${goal.title}</div>
-                    ${statusBadge}
-                </div>
+            <div class="goal-title">${goal.title}
+                <span class="goal-status-badge ${goal.status}">${goal.status}</span>
             </div>
-            ${goal.description ? `<div class="goal-description">${goal.description}</div>` : ''}
+            ${goal.description ? `<div class="goal-desc">${goal.description}</div>` : ''}
             <div class="goal-meta">
-                <div class="goal-meta-item">
-                    <span class="goal-meta-label">Target Date:</span>
-                    <span>${formatDate(goal.target_date)}</span>
-                </div>
-                <div class="goal-meta-item ${deadlineClass}">
-                    <span class="goal-meta-label">Time Remaining:</span>
-                    <span>${deadlineText}</span>
-                </div>
-                <div class="goal-meta-item">
-                    <span class="goal-meta-label">Related Matches:</span>
-                    <span>${goal.match_count} matches</span>
-                </div>
+                <div>Target: <span>${formatDate(goal.target_date)}</span></div>
+                <div>Time: <span>${daysText}</span></div>
+                <div>Matches: <span>${goal.match_count}</span></div>
             </div>
             <div class="goal-actions">
-                <button class="btn-goal-action btn-advice" onclick="showAdvice(${goal.id})">Get Advice</button>
-                ${goal.status === 'active' ? `<button class="btn-goal-action btn-complete" onclick="markGoalComplete(${goal.id})">Mark Complete</button>` : ''}
-                <button class="btn-goal-action btn-delete" onclick="deleteGoal(${goal.id})">Delete</button>
+                <button class="btn-goal" onclick="showAdvice(${goal.id})">Analysis</button>
+                ${goal.status === 'active' ? `<button class="btn-goal success" onclick="markGoalComplete(${goal.id})">Mark Complete</button>` : ''}
+                <button class="btn-goal danger" onclick="deleteGoal(${goal.id})">Delete</button>
             </div>
-        </div>
-    `;
+        </div>`;
 }
 
-// Toggle goal form visibility
 function toggleGoalForm() {
-    const goalForm = document.getElementById('goalForm');
-    goalForm.style.display = goalForm.style.display === 'none' ? 'block' : 'none';
+    const el = document.getElementById('goalForm');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-// Handle goal form submission
 async function handleGoalFormSubmit(e) {
     e.preventDefault();
-
     const formData = {
         title: document.getElementById('goalTitle').value,
         description: document.getElementById('goalDescription').value,
-        target_date: document.getElementById('goalTargetDate').value
+        target_date: document.getElementById('goalTargetDate').value,
     };
-
     try {
-        const response = await fetch(`${API_URL}/goals`, {
+        const res = await fetch(`${API_URL}/goals`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
         });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            // Reset form and hide it
+        if (res.ok) {
             document.getElementById('goalFormElement').reset();
             document.getElementById('goalForm').style.display = 'none';
-
-            // Reload goals
             loadGoals();
-
-            alert('Goal created successfully!');
         } else {
-            alert('Error: ' + result.error);
+            const r = await res.json();
+            alert('Error: ' + r.error);
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to create goal. Please try again.');
-    }
+    } catch (err) { alert('Failed to create goal.'); }
 }
 
-// Delete a goal
-async function deleteGoal(goalId) {
-    if (!confirm('Are you sure you want to delete this goal? This will also remove all match associations.')) {
-        return;
-    }
-
+async function deleteGoal(id) {
+    if (!confirm('Delete this goal?')) return;
     try {
-        const response = await fetch(`${API_URL}/goals/${goalId}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            loadGoals();
-            alert('Goal deleted successfully!');
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete goal. Please try again.');
-    }
+        const res = await fetch(`${API_URL}/goals/${id}`, { method: 'DELETE' });
+        if (res.ok) loadGoals();
+    } catch (err) { alert('Failed to delete goal.'); }
 }
 
-// Mark goal as complete
-async function markGoalComplete(goalId) {
+async function markGoalComplete(id) {
     try {
-        const response = await fetch(`${API_URL}/goals/${goalId}`, {
+        const res = await fetch(`${API_URL}/goals/${id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status: 'completed' })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed' }),
         });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            loadGoals();
-            alert('Goal marked as complete!');
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to update goal. Please try again.');
-    }
+        if (res.ok) loadGoals();
+    } catch (err) { alert('Failed to update goal.'); }
 }
 
-// Show advice modal for a goal
 async function showAdvice(goalId) {
     try {
-        const response = await fetch(`${API_URL}/goals/${goalId}/advice`);
-        const data = await response.json();
+        const res = await fetch(`${API_URL}/goals/${goalId}/advice`);
+        const data = await res.json();
+        if (!res.ok) { alert('Error: ' + data.error); return; }
 
-        if (!response.ok) {
-            alert('Error: ' + data.error);
-            return;
-        }
+        const { goal, analysis } = data;
+        document.getElementById('adviceGoalTitle').textContent = goal.title;
 
-        const goal = data.goal;
-        const analysis = data.analysis;
-
-        // Update modal title
-        document.getElementById('adviceGoalTitle').textContent = `Analysis: ${goal.title}`;
-
-        // Build advice body HTML
-        let adviceHTML = '';
-
-        // Overview stats
-        adviceHTML += '<div class="advice-section">';
-        adviceHTML += '<h4>Overview</h4>';
-        adviceHTML += `<div class="advice-stat">Matches Tracked: ${analysis.match_count}</div>`;
-        adviceHTML += `<div class="advice-stat">Matches with Notes: ${analysis.notes_with_content}</div>`;
+        let html = '<div class="advice-section">';
+        html += `<h4>Overview</h4>`;
+        html += `<div class="advice-stat">Matches tracked: ${analysis.match_count}</div>`;
         if (analysis.days_until_deadline !== null) {
-            const daysText = analysis.days_until_deadline < 0
+            const t = analysis.days_until_deadline < 0
                 ? `${Math.abs(analysis.days_until_deadline)} days overdue`
-                : `${analysis.days_until_deadline} days remaining`;
-            adviceHTML += `<div class="advice-stat">Timeline: ${daysText}</div>`;
+                : `${analysis.days_until_deadline} days left`;
+            html += `<div class="advice-stat">Timeline: ${t}</div>`;
         }
-        adviceHTML += '</div>';
+        html += '</div>';
 
-        // Patterns detected
         if (analysis.patterns.techniques_mentioned.length > 0) {
-            adviceHTML += '<div class="advice-section">';
-            adviceHTML += '<h4>Techniques Mentioned</h4>';
-            adviceHTML += '<ul>';
-            analysis.patterns.techniques_mentioned.forEach(technique => {
-                adviceHTML += `<li>${technique}</li>`;
-            });
-            adviceHTML += '</ul>';
-            adviceHTML += '</div>';
+            html += '<div class="advice-section"><h4>Techniques Mentioned</h4><ul>';
+            analysis.patterns.techniques_mentioned.forEach(t => { html += `<li>${t}</li>`; });
+            html += '</ul></div>';
         }
 
-        // Sentiment analysis
-        adviceHTML += '<div class="advice-section">';
-        adviceHTML += '<h4>Progress Indicators</h4>';
-        adviceHTML += `<div class="advice-stat">Positive notes: ${analysis.patterns.positive_indicators}</div>`;
-        adviceHTML += `<div class="advice-stat">Challenges noted: ${analysis.patterns.struggle_indicators}</div>`;
-        adviceHTML += '</div>';
+        html += `<div class="advice-section"><h4>Progress Indicators</h4>`;
+        html += `<div class="advice-stat">Positive notes: ${analysis.patterns.positive_indicators}</div>`;
+        html += `<div class="advice-stat">Challenges: ${analysis.patterns.struggle_indicators}</div>`;
+        html += '</div>';
 
-        // Suggestions
         if (analysis.suggestions.length > 0) {
-            adviceHTML += '<div class="advice-section">';
-            adviceHTML += '<h4>Personalized Suggestions</h4>';
-            analysis.suggestions.forEach(suggestion => {
-                adviceHTML += `<div class="advice-suggestion">${suggestion}</div>`;
-            });
-            adviceHTML += '</div>';
+            html += '<div class="advice-section"><h4>Suggestions</h4>';
+            analysis.suggestions.forEach(s => { html += `<div class="advice-suggestion">${s}</div>`; });
+            html += '</div>';
         }
 
-        // Set modal content
-        document.getElementById('adviceBody').innerHTML = adviceHTML;
-
-        // Show modal
+        document.getElementById('adviceBody').innerHTML = html;
         document.getElementById('adviceModal').style.display = 'flex';
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to load advice. Please try again.');
-    }
+    } catch (err) { alert('Failed to load analysis.'); }
 }
 
-// Close advice modal
 function closeAdviceModal() {
     document.getElementById('adviceModal').style.display = 'none';
+}
+
+function formatDate(d) {
+    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
