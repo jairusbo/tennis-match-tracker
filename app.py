@@ -97,6 +97,23 @@ def init_db():
             )
         ''')
 
+        # Migration: add advanced stats columns if missing
+        cursor = db.execute("PRAGMA table_info(matches)")
+        existing_cols = {col[1] for col in cursor.fetchall()}
+        advanced_cols = [
+            ('first_serves_attempted', 'INTEGER DEFAULT 0'),
+            ('first_serves_in', 'INTEGER DEFAULT 0'),
+            ('first_serve_points_won', 'INTEGER DEFAULT 0'),
+            ('break_points_opportunities', 'INTEGER DEFAULT 0'),
+            ('break_points_converted', 'INTEGER DEFAULT 0'),
+            ('break_points_faced', 'INTEGER DEFAULT 0'),
+            ('break_points_saved', 'INTEGER DEFAULT 0'),
+            ('unforced_errors_by_set', "TEXT DEFAULT ''"),
+        ]
+        for col_name, col_def in advanced_cols:
+            if col_name not in existing_cols:
+                db.execute(f'ALTER TABLE matches ADD COLUMN {col_name} {col_def}')
+
         # Create goals table
         db.execute('''
             CREATE TABLE IF NOT EXISTS goals (
@@ -162,20 +179,33 @@ def add_match():
         if not is_valid:
             return jsonify({'error': error_msg}), 400
 
+        def _int(val):
+            try:
+                return int(val) if val not in (None, '') else 0
+            except (ValueError, TypeError):
+                return 0
+
         db = get_db()
         db.execute('''
-            INSERT INTO matches (date, opponent, set_scores, tiebreak_scores, your_sets_won, opponent_sets_won, surface, match_type, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO matches (date, opponent, set_scores, tiebreak_scores, your_sets_won, opponent_sets_won,
+                                 surface, match_type, notes,
+                                 first_serves_attempted, first_serves_in, first_serve_points_won,
+                                 break_points_opportunities, break_points_converted,
+                                 break_points_faced, break_points_saved,
+                                 unforced_errors_by_set)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            data['date'],
-            data['opponent'],
-            data['set_scores'],
-            data.get('tiebreak_scores', ''),
-            your_sets,
-            opp_sets,
-            data['surface'],
-            data['match_type'],
-            data.get('notes', '')
+            data['date'], data['opponent'], data['set_scores'],
+            data.get('tiebreak_scores', ''), your_sets, opp_sets,
+            data['surface'], data['match_type'], data.get('notes', ''),
+            _int(data.get('first_serves_attempted')),
+            _int(data.get('first_serves_in')),
+            _int(data.get('first_serve_points_won')),
+            _int(data.get('break_points_opportunities')),
+            _int(data.get('break_points_converted')),
+            _int(data.get('break_points_faced')),
+            _int(data.get('break_points_saved')),
+            data.get('unforced_errors_by_set', '').strip()
         ))
         db.commit()
         match_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -258,7 +288,52 @@ def get_stats():
             LIMIT 10
         ''').fetchall()
 
+        # Advanced stats aggregates
+        adv = db.execute('''
+            SELECT
+                SUM(first_serves_attempted) as fsa,
+                SUM(first_serves_in) as fsi,
+                SUM(first_serve_points_won) as fspw,
+                SUM(break_points_opportunities) as bpo,
+                SUM(break_points_converted) as bpc,
+                SUM(break_points_faced) as bpf,
+                SUM(break_points_saved) as bps
+            FROM matches
+        ''').fetchone()
+
+        ue_rows = db.execute(
+            "SELECT unforced_errors_by_set FROM matches WHERE unforced_errors_by_set != ''"
+        ).fetchall()
+
         db.close()
+
+        # Compute UE by set position
+        set_buckets = {}
+        for row in ue_rows:
+            parts = [p.strip() for p in row['unforced_errors_by_set'].split(',')]
+            for i, p in enumerate(parts):
+                if p.isdigit():
+                    set_buckets.setdefault(i, []).append(int(p))
+
+        avg_ue_by_set = {
+            f'set_{i + 1}': round(sum(v) / len(v), 1)
+            for i, v in sorted(set_buckets.items())
+        }
+        total_ue_entries = sum(len(v) for v in set_buckets.values())
+        total_ue = sum(sum(v) for v in set_buckets.values())
+        avg_ue_per_set = round(total_ue / total_ue_entries, 1) if total_ue_entries else None
+
+        def pct(num, den):
+            return round(num / den * 100, 1) if den else None
+
+        advanced_stats = {
+            'first_serve_pct': pct(adv['fsi'], adv['fsa']),
+            'first_serve_win_pct': pct(adv['fspw'], adv['fsi']),
+            'bp_conversion_pct': pct(adv['bpc'], adv['bpo']),
+            'bp_save_pct': pct(adv['bps'], adv['bpf']),
+            'avg_ue_per_set': avg_ue_per_set,
+            'avg_ue_by_set': avg_ue_by_set,
+        }
 
         return jsonify({
             'total_matches': total_matches,
@@ -266,7 +341,8 @@ def get_stats():
             'losses': losses,
             'win_percentage': round(win_percentage, 1),
             'surface_stats': [dict(row) for row in surface_stats],
-            'recent_form': [row['result'] for row in recent_matches]
+            'recent_form': [row['result'] for row in recent_matches],
+            'advanced_stats': advanced_stats,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -28,6 +28,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Advanced stats form toggle
+    document.getElementById('toggleAdvancedStats').addEventListener('click', function() {
+        const form = document.getElementById('advancedStatsForm');
+        const isHidden = form.style.display === 'none';
+        form.style.display = isHidden ? 'block' : 'none';
+        this.textContent = isHidden ? '− Advanced Stats (Optional)' : '+ Advanced Stats (Optional)';
+    });
+
     // Goal form toggle
     document.getElementById('toggleGoalForm').addEventListener('click', toggleGoalForm);
     document.getElementById('cancelGoalForm').addEventListener('click', function() {
@@ -54,7 +62,15 @@ async function handleFormSubmit(e) {
         tiebreak_scores: document.getElementById('tiebreakScores').value,
         surface: document.getElementById('surface').value,
         match_type: document.getElementById('matchType').value,
-        notes: document.getElementById('notes').value
+        notes: document.getElementById('notes').value,
+        first_serves_attempted: document.getElementById('firstServesAttempted').value,
+        first_serves_in: document.getElementById('firstServesIn').value,
+        first_serve_points_won: document.getElementById('firstServePointsWon').value,
+        break_points_opportunities: document.getElementById('bpOpportunities').value,
+        break_points_converted: document.getElementById('bpConverted').value,
+        break_points_faced: document.getElementById('bpFaced').value,
+        break_points_saved: document.getElementById('bpSaved').value,
+        unforced_errors_by_set: document.getElementById('unforcedErrorsBySet').value,
     };
 
     try {
@@ -73,6 +89,8 @@ async function handleFormSubmit(e) {
             document.getElementById('matchForm').reset();
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('tiebreakGroup').style.display = 'none';
+            document.getElementById('advancedStatsForm').style.display = 'none';
+            document.getElementById('toggleAdvancedStats').textContent = '+ Advanced Stats (Optional)';
 
             // Reload data
             loadMatches();
@@ -139,8 +157,35 @@ function createMatchCard(match) {
                 <div class="match-detail"><strong>Type:</strong> ${match.match_type}</div>
             </div>
             ${match.notes ? `<div class="match-notes">${match.notes}</div>` : ''}
+            ${buildMatchAdvancedStats(match)}
         </div>
     `;
+}
+
+// Build per-match advanced stats snippet
+function buildMatchAdvancedStats(match) {
+    const chips = [];
+
+    if (match.first_serves_attempted > 0) {
+        const fsPct = Math.round(match.first_serves_in / match.first_serves_attempted * 100);
+        chips.push(`1st Serve: ${fsPct}%`);
+        if (match.first_serves_in > 0) {
+            const fsWinPct = Math.round(match.first_serve_points_won / match.first_serves_in * 100);
+            chips.push(`1st Srv Win: ${fsWinPct}%`);
+        }
+    }
+    if (match.break_points_opportunities > 0) {
+        chips.push(`BP Conv: ${match.break_points_converted}/${match.break_points_opportunities}`);
+    }
+    if (match.break_points_faced > 0) {
+        chips.push(`BP Saved: ${match.break_points_saved}/${match.break_points_faced}`);
+    }
+    if (match.unforced_errors_by_set) {
+        chips.push(`UE by set: ${match.unforced_errors_by_set}`);
+    }
+
+    if (chips.length === 0) return '';
+    return `<div class="match-adv-stats">${chips.map(c => `<span class="adv-chip">${c}</span>`).join('')}</div>`;
 }
 
 // Delete a match
@@ -183,6 +228,9 @@ async function loadStats() {
 
         // Display surface stats
         displaySurfaceStats(stats.surface_stats);
+
+        // Display advanced stats
+        displayAdvancedStats(stats.advanced_stats);
     } catch (error) {
         console.error('Error loading stats:', error);
     }
@@ -228,6 +276,50 @@ function displaySurfaceStats(surfaceStats) {
             </div>
         `;
     }).join('');
+}
+
+// Display advanced stats dashboard
+function displayAdvancedStats(adv) {
+    const container = document.getElementById('advancedStatsContainer');
+    const hasAnyData = adv.first_serve_pct !== null || adv.bp_conversion_pct !== null || adv.avg_ue_per_set !== null;
+
+    if (!hasAnyData) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+
+    const fmt = val => val !== null ? val + '%' : '—';
+    document.getElementById('firstServePct').textContent = fmt(adv.first_serve_pct);
+    document.getElementById('firstServeWinPct').textContent = fmt(adv.first_serve_win_pct);
+    document.getElementById('bpConversionPct').textContent = fmt(adv.bp_conversion_pct);
+    document.getElementById('bpSavePct').textContent = fmt(adv.bp_save_pct);
+    document.getElementById('avgUEPerSet').textContent = adv.avg_ue_per_set !== null ? adv.avg_ue_per_set : '—';
+
+    // UE by set breakdown
+    const ueBySet = adv.avg_ue_by_set;
+    const ueContainer = document.getElementById('ueBySetContainer');
+    const ueEl = document.getElementById('ueBySet');
+
+    if (Object.keys(ueBySet).length > 0) {
+        ueContainer.style.display = 'block';
+        const maxVal = Math.max(...Object.values(ueBySet));
+        ueEl.innerHTML = Object.entries(ueBySet).map(([key, val]) => {
+            const label = key.replace('_', ' ').replace('set', 'Set');
+            const barWidth = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
+            return `
+                <div class="ue-bar-row">
+                    <div class="ue-bar-label">${label}</div>
+                    <div class="ue-bar-track">
+                        <div class="ue-bar-fill" style="width: ${barWidth}%"></div>
+                    </div>
+                    <div class="ue-bar-value">${val} avg</div>
+                </div>`;
+        }).join('');
+    } else {
+        ueContainer.style.display = 'none';
+    }
 }
 
 // Format date for display

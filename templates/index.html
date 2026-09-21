@@ -36,6 +36,37 @@
         <!-- Recent Form -->
         <div class="recent-form" id="recentForm"></div>
 
+        <!-- Advanced Stats Dashboard -->
+        <div class="advanced-stats-container" id="advancedStatsContainer" style="display: none;">
+            <h2>Advanced Stats</h2>
+            <div class="stats-container advanced-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value adv-value" id="firstServePct">—</div>
+                    <div class="stat-label">1st Serve %</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value adv-value" id="firstServeWinPct">—</div>
+                    <div class="stat-label">1st Serve Win %</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value adv-value" id="bpConversionPct">—</div>
+                    <div class="stat-label">BP Conversion</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value adv-value" id="bpSavePct">—</div>
+                    <div class="stat-label">BP Save %</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value adv-value" id="avgUEPerSet">—</div>
+                    <div class="stat-label">Avg UE / Set</div>
+                </div>
+            </div>
+            <div id="ueBySetContainer" class="ue-by-set" style="display: none;">
+                <div class="ue-by-set-label">Unforced Errors by Set</div>
+                <div id="ueBySet" class="ue-by-set-bars"></div>
+            </div>
+        </div>
+
         <!-- Add Match Form -->
         <div class="form-container">
             <h2>Log New Match</h2>
@@ -89,6 +120,57 @@
                 <div class="form-group">
                     <label for="notes">Notes (Optional)</label>
                     <textarea id="notes" name="notes" rows="3" placeholder="Match notes, key moments, areas to improve... Tip: Mention your active goals to track progress!"></textarea>
+                </div>
+
+                <!-- Advanced Stats Toggle -->
+                <button type="button" class="btn-advanced-toggle" id="toggleAdvancedStats">
+                    + Advanced Stats (Optional)
+                </button>
+
+                <div id="advancedStatsForm" style="display: none;">
+                    <div class="advanced-stats-divider">First Serve</div>
+                    <div class="form-row form-row-three">
+                        <div class="form-group">
+                            <label for="firstServesAttempted">Attempted</label>
+                            <input type="number" id="firstServesAttempted" min="0" placeholder="e.g., 40">
+                        </div>
+                        <div class="form-group">
+                            <label for="firstServesIn">In</label>
+                            <input type="number" id="firstServesIn" min="0" placeholder="e.g., 28">
+                        </div>
+                        <div class="form-group">
+                            <label for="firstServePointsWon">Points Won</label>
+                            <input type="number" id="firstServePointsWon" min="0" placeholder="e.g., 22">
+                        </div>
+                    </div>
+
+                    <div class="advanced-stats-divider">Break Points</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bpOpportunities">Opportunities (your BP chances)</label>
+                            <input type="number" id="bpOpportunities" min="0" placeholder="e.g., 5">
+                        </div>
+                        <div class="form-group">
+                            <label for="bpConverted">Converted</label>
+                            <input type="number" id="bpConverted" min="0" placeholder="e.g., 3">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bpFaced">Faced (opponent's BP chances)</label>
+                            <input type="number" id="bpFaced" min="0" placeholder="e.g., 4">
+                        </div>
+                        <div class="form-group">
+                            <label for="bpSaved">Saved</label>
+                            <input type="number" id="bpSaved" min="0" placeholder="e.g., 2">
+                        </div>
+                    </div>
+
+                    <div class="advanced-stats-divider">Unforced Errors</div>
+                    <div class="form-group">
+                        <label for="unforcedErrorsBySet">Errors by Set</label>
+                        <input type="text" id="unforcedErrorsBySet" placeholder="e.g., 8,5,3  (one number per set, comma-separated)">
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-primary">Add Match</button>

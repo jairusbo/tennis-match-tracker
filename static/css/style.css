@@ -684,6 +684,134 @@ header h1 {
     color: #92400e;
 }
 
+/* Advanced Stats Dashboard */
+.advanced-stats-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.advanced-stats-container h2 {
+    margin-bottom: 20px;
+    color: #667eea;
+}
+
+.advanced-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.adv-value {
+    font-size: 1.8em;
+}
+
+/* UE by Set bar chart */
+.ue-by-set {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.ue-by-set-label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 12px;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ue-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.ue-bar-label {
+    width: 50px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #555;
+}
+
+.ue-bar-track {
+    flex: 1;
+    background: #f3f4f6;
+    border-radius: 4px;
+    height: 12px;
+    overflow: hidden;
+}
+
+.ue-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.ue-bar-value {
+    width: 60px;
+    font-size: 0.85em;
+    color: #666;
+    text-align: right;
+}
+
+/* Advanced stats form section */
+.btn-advanced-toggle {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 16px;
+    background: #f3f4f6;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    color: #667eea;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn-advanced-toggle:hover {
+    background: #eff6ff;
+    border-color: #667eea;
+}
+
+.advanced-stats-divider {
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #9ca3af;
+    margin: 16px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.form-row-three {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Per-match advanced stat chips */
+.match-adv-stats {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.adv-chip {
+    background: #eff6ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+}
+
 .deadline-urgent {
     background: #fee2e2;
     border-left: 3px solid #ef4444;
