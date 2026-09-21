@@ -126,12 +126,14 @@ function createMatchCard(match) {
 
     return `
         <div class="match-card ${cls}">
-            <button class="match-delete" data-id="${match.id}">Delete</button>
             <div class="match-top">
                 <div>
                     <span class="match-opponent">${match.opponent}</span>${utrTag}
                 </div>
-                <span class="match-result-badge ${cls}">${label}</span>
+                <div class="match-top-right">
+                    <span class="match-result-badge ${cls}">${label}</span>
+                    <button class="match-delete" data-id="${match.id}">Delete</button>
+                </div>
             </div>
             <div class="match-meta">
                 <div>${formatDate(match.date)}</div>
@@ -251,7 +253,7 @@ function createGoalCard(goal) {
     const daysText = days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`;
 
     return `
-        <div class="goal-card ${goal.status}">
+        <div class="goal-card ${goal.status}" id="goal-card-${goal.id}">
             <div class="goal-title">${goal.title}
                 <span class="goal-status-badge ${goal.status}">${goal.status}</span>
             </div>
@@ -263,10 +265,56 @@ function createGoalCard(goal) {
             </div>
             <div class="goal-actions">
                 <button class="btn-goal" onclick="showAdvice(${goal.id})">Analysis</button>
+                <button class="btn-goal" onclick="showEditGoal(${goal.id}, '${escapeAttr(goal.title)}', '${escapeAttr(goal.description || '')}', '${goal.target_date}')">Edit</button>
                 ${goal.status === 'active' ? `<button class="btn-goal success" onclick="markGoalComplete(${goal.id})">Mark Complete</button>` : ''}
                 <button class="btn-goal danger" onclick="deleteGoal(${goal.id})">Delete</button>
             </div>
         </div>`;
+}
+
+function escapeAttr(str) {
+    return str.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+function showEditGoal(id, title, description, targetDate) {
+    const card = document.getElementById(`goal-card-${id}`);
+    card.innerHTML = `
+        <form class="goal-edit-form" onsubmit="saveEditGoal(event, ${id})">
+            <div class="form-group">
+                <label>Goal</label>
+                <input type="text" id="edit-title-${id}" value="${escapeAttr(title)}" required>
+            </div>
+            <div class="form-group">
+                <label>Description <span class="optional">optional</span></label>
+                <textarea id="edit-desc-${id}" rows="2">${description}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Target Date</label>
+                <input type="date" id="edit-date-${id}" value="${targetDate}" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary btn-sm">Save</button>
+                <button type="button" class="btn-ghost" onclick="loadGoals()">Cancel</button>
+            </div>
+        </form>`;
+}
+
+async function saveEditGoal(e, id) {
+    e.preventDefault();
+    const data = {
+        title: document.getElementById(`edit-title-${id}`).value,
+        description: document.getElementById(`edit-desc-${id}`).value,
+        target_date: document.getElementById(`edit-date-${id}`).value,
+    };
+    try {
+        const res = await fetch(`${API_URL}/goals/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (res.ok) loadGoals();
+        else { const r = await res.json(); alert('Error: ' + r.error); }
+    } catch (err) { alert('Failed to save goal.'); }
 }
 
 function toggleGoalForm() {

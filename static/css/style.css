@@ -523,6 +523,9 @@ body {
 .btn-goal.success { color: var(--win); border-color: var(--win-border); }
 .btn-goal.success:hover { background: var(--win-bg); }
 
+.goal-edit-form .form-group { margin-bottom: 12px; }
+.goal-edit-form .form-actions { margin-top: 12px; }
+
 .no-items {
     text-align: center;
     padding: 32px;
@@ -539,7 +542,6 @@ body {
     padding: 18px 20px;
     background: var(--surface);
     border-left: 3px solid var(--border);
-    position: relative;
 }
 
 .match-card.win { border-left-color: var(--win); background: var(--win-bg); }
@@ -616,10 +618,14 @@ body {
     border-radius: 12px;
 }
 
+.match-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .match-delete {
-    position: absolute;
-    top: 14px;
-    right: 14px;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--muted);
