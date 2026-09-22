@@ -66,7 +66,7 @@ A full-stack web application to track tennis matches, monitor performance statis
 
 5. **Open in browser**
    ```
-   http://localhost:5000
+   http://localhost:8080
    ```
 
 ## Project Structure
