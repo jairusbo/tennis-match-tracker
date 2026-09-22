@@ -290,12 +290,9 @@ def get_stats():
             LIMIT 10
         ''').fetchall()
 
-        # Advanced stats aggregates
+        # Advanced stats aggregates (break points only — first serve tracking removed by design)
         adv = db.execute('''
             SELECT
-                SUM(first_serves_attempted) as fsa,
-                SUM(first_serves_in) as fsi,
-                SUM(first_serve_points_won) as fspw,
                 SUM(break_points_opportunities) as bpo,
                 SUM(break_points_converted) as bpc,
                 SUM(break_points_faced) as bpf,
@@ -329,8 +326,6 @@ def get_stats():
             return round(num / den * 100, 1) if den else None
 
         advanced_stats = {
-            'first_serve_pct': pct(adv['fsi'], adv['fsa']),
-            'first_serve_win_pct': pct(adv['fspw'], adv['fsi']),
             'bp_conversion_pct': pct(adv['bpc'], adv['bpo']),
             'bp_save_pct': pct(adv['bps'], adv['bpf']),
             'avg_ue_per_set': avg_ue_per_set,
